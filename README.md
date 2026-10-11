@@ -2,7 +2,9 @@
 
 Tamil Unicode ↔ ISO 15919 transliteration, wrapped in a .NET 10 minimal Web API.
 
-The core transliteration logic is the `Madras` class, originally written by **C. Gunasekaran** in September 2007. This repository restores that class as-is and adds a simple API and test UI around it.
+The core transliteration logic is the `Madras` class, originally written by **C. Gunasekaran** in September 2007. This repository restores that class, optimises it with a single-pass compiled regex, and wraps it in a minimal API with a browser test UI.
+
+A client-side-only companion app is available at [transmadras.vercel.app](https://transmadras.vercel.app/) — source at [TransMadras.SK](https://github.com/kalaiguna/TransMadras.SK) (SvelteKit + Vercel).
 
 ## What it does
 
@@ -64,15 +66,26 @@ Converts ISO 15919 transliteration back to Tamil Unicode.
 { "result": "தமிழ்" }
 ```
 
+## Tests
+
+```bash
+dotnet test TransMadras.Tests/
+```
+
+73 xUnit tests covering all vowel series, round-trips, priority ordering, and edge cases.
+
 ## Project structure
 
 ```
 transmadras/
-├── Madras.cs               # Original transliteration class (C. Gunasekaran, 2007)
-├── Program.cs              # Minimal API entry point
-├── TransMadras.csproj      # .NET 10 project file
+├── Madras.cs                          # Transliteration class (C. Gunasekaran, 2007)
+├── Program.cs                         # Minimal API entry point
+├── TransMadras.csproj                 # .NET 10 project file
+├── TransMadras.Tests/
+│   ├── MadrasTests.cs                 # xUnit tests
+│   └── TransMadras.Tests.csproj
 └── wwwroot/
-    └── index.html          # Browser test page
+    └── index.html                     # Browser test page
 ```
 
 ## License
