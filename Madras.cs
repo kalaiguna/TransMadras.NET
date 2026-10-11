@@ -1,674 +1,116 @@
-﻿using System;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Author: C.Gunasekaran
 /// Date: 14.09.07
 /// Purpose: Tamil Transliteration
+///
+/// Original implementation (Sep 2007): ~300 sequential String.Replace() calls per method.
+/// Optimised (Oct 2026): single-pass Regex.Replace() using a compiled regex built from
+/// CONSONANTS × VOWELS tables in a static constructor. Public API unchanged.
 /// </summary>
 public class Madras
 {
-    public static String Transtyle(String srcTxt)
+    // [tamil, ISO-15919]
+    private static readonly (string Tamil, string Latin)[] Consonants =
+    [
+        ("க",  "k" ), ("ங",  "ṅ" ), ("ச",  "c" ), ("ஞ",  "ñ" ),
+        ("ட",  "ṭ" ), ("ண",  "ṇ" ), ("த",  "t" ), ("ந",  "n" ),
+        ("ப",  "p" ), ("ம",  "m" ), ("ய",  "y" ), ("ர",  "r" ),
+        ("ல",  "l" ), ("வ",  "v" ), ("ழ",  "ḻ" ), ("ள",  "ḷ" ),
+        ("ற",  "ṟ" ), ("ன",  "ṉ" ), ("ஜ",  "j" ), ("ஷ",  "ṣ" ),
+        ("ஸ",  "s" ), ("ஹ",  "h" ),
+    ];
+
+    // [vowel diacritic, ISO-15919 suffix] — empty diacritic = inherent /a/
+    private static readonly (string Diacritic, string Vowel)[] Vowels =
+    [
+        ("",   "a" ),
+        ("ா",  "ā" ),
+        ("ி",  "i" ),
+        ("ீ",  "ī" ),
+        ("ு",  "u" ),
+        ("ூ",  "ū" ),
+        ("ெ",  "e" ),
+        ("ே",  "ē" ),
+        ("ை",  "ai"),
+        ("ொ",  "o" ),
+        ("ோ",  "ō" ),
+        ("ௌ",  "au"),
+    ];
+
+    private static readonly Dictionary<string, string> StyleMap;
+    private static readonly Regex StyleRegex;
+    private static readonly Dictionary<string, string> UniMap;
+    private static readonly Regex UniRegex;
+
+    static Madras()
     {
-       //0 soul Series
-        srcTxt = srcTxt.Replace("அ", "a");
-        srcTxt = srcTxt.Replace("ஆ", "ā");
-        srcTxt = srcTxt.Replace("இ", "i");
-        srcTxt = srcTxt.Replace("ஈ", "ī");
-        srcTxt = srcTxt.Replace("உ", "u");
-        srcTxt = srcTxt.Replace("ஊ", "ū");
-        srcTxt = srcTxt.Replace("எ", "e");
-        srcTxt = srcTxt.Replace("ஏ", "ē");
-        srcTxt = srcTxt.Replace("ஐ", "ai");
-        srcTxt = srcTxt.Replace("ஒ", "o");
-        srcTxt = srcTxt.Replace("ஓ", "ō");
-        srcTxt = srcTxt.Replace("ஔ", "au");
-        srcTxt = srcTxt.Replace("ஃ", "ḵ");
-        srcTxt = srcTxt.Replace("ஸ்ரீ", "šrī");
-
-        //1 k mei Series
-        srcTxt = srcTxt.Replace("க்", "k");
-        srcTxt = srcTxt.Replace("ங்", "ṅ");
-        srcTxt = srcTxt.Replace("ச்", "c");
-        srcTxt = srcTxt.Replace("ஞ்", "ñ");
-        srcTxt = srcTxt.Replace("ட்", "ṭ");
-        srcTxt = srcTxt.Replace("ண்", "ṇ");
-        srcTxt = srcTxt.Replace("த்", "t");
-        srcTxt = srcTxt.Replace("ந்", "n");
-        srcTxt = srcTxt.Replace("ப்", "p");
-        srcTxt = srcTxt.Replace("ம்", "m");
-        srcTxt = srcTxt.Replace("ய்", "y");
-        srcTxt = srcTxt.Replace("ர்", "r");
-        srcTxt = srcTxt.Replace("ல்", "l");
-        srcTxt = srcTxt.Replace("வ்", "v");
-        srcTxt = srcTxt.Replace("ழ்", "ḻ");
-        srcTxt = srcTxt.Replace("ள்", "ḷ");
-        srcTxt = srcTxt.Replace("ற்", "ṟ");
-        srcTxt = srcTxt.Replace("ன்", "ṉ");
-        srcTxt = srcTxt.Replace("ஜ்", "j");
-        srcTxt = srcTxt.Replace("ஷ்", "ṣ");
-        srcTxt = srcTxt.Replace("ஸ்", "s");
-        srcTxt = srcTxt.Replace("ஹ்", "h");
-
-        //2 ā(ஆ) Series
-        srcTxt = srcTxt.Replace("கா", "kā");
-        srcTxt = srcTxt.Replace("ஙா", "ṅā");
-        srcTxt = srcTxt.Replace("சா", "cā");
-        srcTxt = srcTxt.Replace("ஞா", "ñā");
-        srcTxt = srcTxt.Replace("டா", "ṭā");
-        srcTxt = srcTxt.Replace("ணா", "ṇā");
-        srcTxt = srcTxt.Replace("தா", "tā");
-        srcTxt = srcTxt.Replace("நா", "nā");
-        srcTxt = srcTxt.Replace("பா", "pā");
-        srcTxt = srcTxt.Replace("மா", "mā");
-        srcTxt = srcTxt.Replace("யா", "yā");
-        srcTxt = srcTxt.Replace("ரா", "rā");
-        srcTxt = srcTxt.Replace("லா", "lā");
-        srcTxt = srcTxt.Replace("வா", "vā");
-        srcTxt = srcTxt.Replace("ழா", "ḻā");
-        srcTxt = srcTxt.Replace("ளா", "ḷā");
-        srcTxt = srcTxt.Replace("றா", "ṟā");
-        srcTxt = srcTxt.Replace("னா", "ṉā");
-        srcTxt = srcTxt.Replace("ஜா", "jā");
-        srcTxt = srcTxt.Replace("ஷா", "ṣā");
-        srcTxt = srcTxt.Replace("ஸா", "sā");
-        srcTxt = srcTxt.Replace("ஹா", "hā");
-
-        //3 i(இ) Series
-        srcTxt = srcTxt.Replace("கி", "ki");
-        srcTxt = srcTxt.Replace("ஙி", "ṅi");
-        srcTxt = srcTxt.Replace("சி", "ci");
-        srcTxt = srcTxt.Replace("ஞி", "ñi");
-        srcTxt = srcTxt.Replace("டி", "ṭi");
-        srcTxt = srcTxt.Replace("ணி", "ṇi");
-        srcTxt = srcTxt.Replace("தி", "ti");
-        srcTxt = srcTxt.Replace("நி", "ni");
-        srcTxt = srcTxt.Replace("பி", "pi");
-        srcTxt = srcTxt.Replace("மி", "mi");
-        srcTxt = srcTxt.Replace("யி", "yi");
-        srcTxt = srcTxt.Replace("ரி", "ri");
-        srcTxt = srcTxt.Replace("லி", "li");
-        srcTxt = srcTxt.Replace("வி", "vi");
-        srcTxt = srcTxt.Replace("ழி", "ḻi");
-        srcTxt = srcTxt.Replace("ளி", "ḷi");
-        srcTxt = srcTxt.Replace("றி", "ṟi");
-        srcTxt = srcTxt.Replace("னி", "ṉi");
-        srcTxt = srcTxt.Replace("ஜி", "ji");
-        srcTxt = srcTxt.Replace("ஷி", "ṣi");
-        srcTxt = srcTxt.Replace("ஸி", "si");
-        srcTxt = srcTxt.Replace("ஹி", "hi");
-
-        //4  ī(ஈ)	 Series 2:20pm
-        srcTxt = srcTxt.Replace("கீ", "kī");
-        srcTxt = srcTxt.Replace("ஙீ", "ṅī");
-        srcTxt = srcTxt.Replace("சீ", "cī");
-        srcTxt = srcTxt.Replace("ஞீ", "ñī");
-        srcTxt = srcTxt.Replace("டீ", "ṭī");
-        srcTxt = srcTxt.Replace("ணீ", "ṇī");
-        srcTxt = srcTxt.Replace("தீ", "tī");
-        srcTxt = srcTxt.Replace("நீ", "nī");
-        srcTxt = srcTxt.Replace("பீ", "pī");
-        srcTxt = srcTxt.Replace("மீ", "mī");
-        srcTxt = srcTxt.Replace("யீ", "yī");
-        srcTxt = srcTxt.Replace("ரீ", "rī");
-        srcTxt = srcTxt.Replace("லீ", "lī");
-        srcTxt = srcTxt.Replace("வீ", "vī");
-        srcTxt = srcTxt.Replace("ழீ", "ḻī");
-        srcTxt = srcTxt.Replace("ளீ", "ḷī");
-        srcTxt = srcTxt.Replace("றீ", "ṟī");
-        srcTxt = srcTxt.Replace("னீ", "ṉī");
-        srcTxt = srcTxt.Replace("ஜீ", "jī");
-        srcTxt = srcTxt.Replace("ஷீ", "ṣī");
-        srcTxt = srcTxt.Replace("ஸீ", "sī");
-        srcTxt = srcTxt.Replace("ஹீ", "hī");
-
-        //5 u(உ) Series
-        srcTxt = srcTxt.Replace("கு", "ku");
-        srcTxt = srcTxt.Replace("ஙு", "ṅu");
-        srcTxt = srcTxt.Replace("சு", "cu");
-        srcTxt = srcTxt.Replace("ஞு", "ñu");
-        srcTxt = srcTxt.Replace("டு", "ṭu");
-        srcTxt = srcTxt.Replace("ணு", "ṇu");
-        srcTxt = srcTxt.Replace("து", "tu");
-        srcTxt = srcTxt.Replace("நு", "nu");
-        srcTxt = srcTxt.Replace("பு", "pu");
-        srcTxt = srcTxt.Replace("மு", "mu");
-        srcTxt = srcTxt.Replace("யு", "yu");
-        srcTxt = srcTxt.Replace("ரு", "ru");
-        srcTxt = srcTxt.Replace("லு", "lu");
-        srcTxt = srcTxt.Replace("வு", "vu");
-        srcTxt = srcTxt.Replace("ழு", "ḻu");
-        srcTxt = srcTxt.Replace("ளு", "ḷu");
-        srcTxt = srcTxt.Replace("று", "ṟu");
-        srcTxt = srcTxt.Replace("னு", "ṉu");
-        srcTxt = srcTxt.Replace("ஜு", "ju");
-        srcTxt = srcTxt.Replace("ஷு", "ṣu");
-        srcTxt = srcTxt.Replace("ஸு", "su");
-        srcTxt = srcTxt.Replace("ஹு", "hu");
-
-        //6 ū (ஊ) Series
-        srcTxt = srcTxt.Replace("கூ", "kū");
-        srcTxt = srcTxt.Replace("ஙூ", "ṅū");
-        srcTxt = srcTxt.Replace("சூ", "cū");
-        srcTxt = srcTxt.Replace("ஞூ", "ñū");
-        srcTxt = srcTxt.Replace("டூ", "ṭū");
-        srcTxt = srcTxt.Replace("ணூ", "ṇū");
-        srcTxt = srcTxt.Replace("தூ", "tū");
-        srcTxt = srcTxt.Replace("நூ", "nū");
-        srcTxt = srcTxt.Replace("பூ", "pū");
-        srcTxt = srcTxt.Replace("மூ", "mū");
-        srcTxt = srcTxt.Replace("யூ", "yū");
-        srcTxt = srcTxt.Replace("ரூ", "rū");
-        srcTxt = srcTxt.Replace("லூ", "lū");
-        srcTxt = srcTxt.Replace("வூ", "vū");
-        srcTxt = srcTxt.Replace("ழூ", "ḻū");
-        srcTxt = srcTxt.Replace("ளூ", "ḷū");
-        srcTxt = srcTxt.Replace("றூ", "ṟū");
-        srcTxt = srcTxt.Replace("னூ", "ṉū");
-        srcTxt = srcTxt.Replace("ஜூ", "jū");
-        srcTxt = srcTxt.Replace("ஷூ", "ṣū");
-        srcTxt = srcTxt.Replace("ஸூ", "sū");
-        srcTxt = srcTxt.Replace("ஹூ", "hū");
-
-        //7 e(எ) Series
-        srcTxt = srcTxt.Replace("கெ", "ke");
-        srcTxt = srcTxt.Replace("ஙெ", "ṅe");
-        srcTxt = srcTxt.Replace("செ", "ce");
-        srcTxt = srcTxt.Replace("ஞெ", "ñe");
-        srcTxt = srcTxt.Replace("டெ", "ṭe");
-        srcTxt = srcTxt.Replace("ணெ", "ṇe");
-        srcTxt = srcTxt.Replace("தெ", "te");
-        srcTxt = srcTxt.Replace("நெ", "ne");
-        srcTxt = srcTxt.Replace("பெ", "pe");
-        srcTxt = srcTxt.Replace("மெ", "me");
-        srcTxt = srcTxt.Replace("யெ", "ye");
-        srcTxt = srcTxt.Replace("ரெ", "re");
-        srcTxt = srcTxt.Replace("லெ", "le");
-        srcTxt = srcTxt.Replace("வெ", "ve");
-        srcTxt = srcTxt.Replace("ழெ", "ḻe");
-        srcTxt = srcTxt.Replace("ளெ", "ḷe");
-        srcTxt = srcTxt.Replace("றெ", "ṟe");
-        srcTxt = srcTxt.Replace("னெ", "ṉe");
-        srcTxt = srcTxt.Replace("ஜெ", "je");
-        srcTxt = srcTxt.Replace("ஷெ", "ṣe");
-        srcTxt = srcTxt.Replace("ஸெ", "se");
-        srcTxt = srcTxt.Replace("ஹெ", "he");
-
-        //8 ē(ஏ) Series
-        srcTxt = srcTxt.Replace("கே", "kē");
-        srcTxt = srcTxt.Replace("ஙே", "ṅē");
-        srcTxt = srcTxt.Replace("சே", "cē");
-        srcTxt = srcTxt.Replace("ஞே", "ñē");
-        srcTxt = srcTxt.Replace("டே", "ṭē");
-        srcTxt = srcTxt.Replace("ணே", "ṇē");
-        srcTxt = srcTxt.Replace("தே", "tē");
-        srcTxt = srcTxt.Replace("நே", "nē");
-        srcTxt = srcTxt.Replace("பே", "pē");
-        srcTxt = srcTxt.Replace("மே", "mē");
-        srcTxt = srcTxt.Replace("யே", "yē");
-        srcTxt = srcTxt.Replace("ரே", "rē");
-        srcTxt = srcTxt.Replace("லே", "lē");
-        srcTxt = srcTxt.Replace("வே", "vē");
-        srcTxt = srcTxt.Replace("ழே", "ḻē");
-        srcTxt = srcTxt.Replace("ளே", "ḷē");
-        srcTxt = srcTxt.Replace("றே", "ṟē");
-        srcTxt = srcTxt.Replace("னே", "ṉē");
-        srcTxt = srcTxt.Replace("ஜே", "jē");
-        srcTxt = srcTxt.Replace("ஷே", "ṣē");
-        srcTxt = srcTxt.Replace("ஸே", "sē");
-        srcTxt = srcTxt.Replace("ஹே", "hē");
-
-        //9 ai(ஐ) Series
-        srcTxt = srcTxt.Replace("கை", "kai");
-        srcTxt = srcTxt.Replace("ஙை", "ṅai");
-        srcTxt = srcTxt.Replace("சை", "cai");
-        srcTxt = srcTxt.Replace("ஞை", "ñai");
-        srcTxt = srcTxt.Replace("டை", "ṭai");
-        srcTxt = srcTxt.Replace("ணை", "ṇai");
-        srcTxt = srcTxt.Replace("தை", "tai");
-        srcTxt = srcTxt.Replace("நை", "nai");
-        srcTxt = srcTxt.Replace("பை", "pai");
-        srcTxt = srcTxt.Replace("மை", "mai");
-        srcTxt = srcTxt.Replace("யை", "yai");
-        srcTxt = srcTxt.Replace("ரை", "rai");
-        srcTxt = srcTxt.Replace("லை", "lai");
-        srcTxt = srcTxt.Replace("வை", "vai");
-        srcTxt = srcTxt.Replace("ழை", "ḻai");
-        srcTxt = srcTxt.Replace("ளை", "ḷai");
-        srcTxt = srcTxt.Replace("றை", "ṟai");
-        srcTxt = srcTxt.Replace("னை", "ṉai");
-        srcTxt = srcTxt.Replace("ஜை", "jai");
-        srcTxt = srcTxt.Replace("ஷை", "ṣai");
-        srcTxt = srcTxt.Replace("ஸை", "sai");
-        srcTxt = srcTxt.Replace("ஹை", "hai");
-
-        //10 o(ஒ) Series
-        srcTxt = srcTxt.Replace("கொ", "ko");
-        srcTxt = srcTxt.Replace("ஙொ", "ṅo");
-        srcTxt = srcTxt.Replace("சொ", "co");
-        srcTxt = srcTxt.Replace("ஞொ", "ño");
-        srcTxt = srcTxt.Replace("டொ", "ṭo");
-        srcTxt = srcTxt.Replace("ணொ", "ṇo");
-        srcTxt = srcTxt.Replace("தொ", "to");
-        srcTxt = srcTxt.Replace("நொ", "no");
-        srcTxt = srcTxt.Replace("பொ", "po");
-        srcTxt = srcTxt.Replace("மொ", "mo");
-        srcTxt = srcTxt.Replace("யொ", "yo");
-        srcTxt = srcTxt.Replace("ரொ", "ro");
-        srcTxt = srcTxt.Replace("லொ", "lo");
-        srcTxt = srcTxt.Replace("வொ", "vo");
-        srcTxt = srcTxt.Replace("ழொ", "ḻo");
-        srcTxt = srcTxt.Replace("ளொ", "ḷo");
-        srcTxt = srcTxt.Replace("றொ", "ṟo");
-        srcTxt = srcTxt.Replace("னொ", "ṉo");
-        srcTxt = srcTxt.Replace("ஜொ", "jo");
-        srcTxt = srcTxt.Replace("ஷொ", "ṣo");
-        srcTxt = srcTxt.Replace("ஸொ", "so");
-        srcTxt = srcTxt.Replace("ஹொ", "ho");
-
-        //11 ō(ஓ) Series
-        srcTxt = srcTxt.Replace("கோ", "kō");
-        srcTxt = srcTxt.Replace("ஙோ", "ṅō");
-        srcTxt = srcTxt.Replace("சோ", "cō");
-        srcTxt = srcTxt.Replace("ஞோ", "ñō");
-        srcTxt = srcTxt.Replace("டோ", "ṭō");
-        srcTxt = srcTxt.Replace("ணோ", "ṇō");
-        srcTxt = srcTxt.Replace("தோ", "tō");
-        srcTxt = srcTxt.Replace("நோ", "nō");
-        srcTxt = srcTxt.Replace("போ", "pō");
-        srcTxt = srcTxt.Replace("மோ", "mō");
-        srcTxt = srcTxt.Replace("யோ", "yō");
-        srcTxt = srcTxt.Replace("ரோ", "rō");
-        srcTxt = srcTxt.Replace("லோ", "lō");
-        srcTxt = srcTxt.Replace("வோ", "vō");
-        srcTxt = srcTxt.Replace("ழோ", "ḻō");
-        srcTxt = srcTxt.Replace("ளோ", "ḷō");
-        srcTxt = srcTxt.Replace("றோ", "ṟō");
-        srcTxt = srcTxt.Replace("னோ", "ṉō");
-        srcTxt = srcTxt.Replace("ஜோ", "jō");
-        srcTxt = srcTxt.Replace("ஷோ", "ṣō");
-        srcTxt = srcTxt.Replace("ஸோ", "sō");
-        srcTxt = srcTxt.Replace("ஹோ", "hō");
-
-        //12 au(ஔ) Series
-        srcTxt = srcTxt.Replace("கௌ", "kau");
-        srcTxt = srcTxt.Replace("ஙௌ", "ṅau");
-        srcTxt = srcTxt.Replace("சௌ", "cau");
-        srcTxt = srcTxt.Replace("ஞௌ", "ñau");
-        srcTxt = srcTxt.Replace("டௌ", "ṭau");
-        srcTxt = srcTxt.Replace("ணௌ", "ṇau");
-        srcTxt = srcTxt.Replace("தௌ", "tau");
-        srcTxt = srcTxt.Replace("நௌ", "nau");
-        srcTxt = srcTxt.Replace("பௌ", "pau");
-        srcTxt = srcTxt.Replace("மௌ", "mau");
-        srcTxt = srcTxt.Replace("யௌ", "yau");
-        srcTxt = srcTxt.Replace("ரௌ", "rau");
-        srcTxt = srcTxt.Replace("லௌ", "lau");
-        srcTxt = srcTxt.Replace("வௌ", "vau");
-        srcTxt = srcTxt.Replace("ழௌ", "ḻau");
-        srcTxt = srcTxt.Replace("ளௌ", "ḷau");
-        srcTxt = srcTxt.Replace("றௌ", "ṟau");
-        srcTxt = srcTxt.Replace("னௌ", "ṉau");
-        srcTxt = srcTxt.Replace("ஜௌ", "jau");
-        srcTxt = srcTxt.Replace("ஷௌ", "ṣau");
-        srcTxt = srcTxt.Replace("ஸௌ", "sau");
-        srcTxt = srcTxt.Replace("ஹௌ", "hau");
-
-        //13 a Series
-        srcTxt = srcTxt.Replace("க", "ka");
-        srcTxt = srcTxt.Replace("ங", "ṅa");
-        srcTxt = srcTxt.Replace("ச", "ca");
-        srcTxt = srcTxt.Replace("ஞ", "ña");
-        srcTxt = srcTxt.Replace("ட", "ṭa");
-        srcTxt = srcTxt.Replace("ண", "ṇa");
-        srcTxt = srcTxt.Replace("த", "ta");
-        srcTxt = srcTxt.Replace("ந", "na");
-        srcTxt = srcTxt.Replace("ப", "pa");
-        srcTxt = srcTxt.Replace("ம", "ma");
-        srcTxt = srcTxt.Replace("ய", "ya");
-        srcTxt = srcTxt.Replace("ர", "ra");
-        srcTxt = srcTxt.Replace("ல", "la");
-        srcTxt = srcTxt.Replace("வ", "va");
-        srcTxt = srcTxt.Replace("ழ", "ḻa");
-        srcTxt = srcTxt.Replace("ள", "ḷa");
-        srcTxt = srcTxt.Replace("ற", "ṟa");
-        srcTxt = srcTxt.Replace("ஷ", "ṣa");
-        srcTxt = srcTxt.Replace("ஜ", "ja");
-        srcTxt = srcTxt.Replace("ன", "ṉa");
-        srcTxt = srcTxt.Replace("ஸ", "sa");
-        srcTxt = srcTxt.Replace("ஹ", "ha");
-    return srcTxt;
+        (StyleMap, StyleRegex) = BuildTable(StyleEntries());
+        (UniMap, UniRegex) = BuildTable(UniEntries());
     }
-    public static String Trans2Uni(String srcTxt)
+
+    private static IEnumerable<(string Key, string Value)> StyleEntries()
     {
-        srcTxt = srcTxt.Replace("šrī","ஸ்ரீ");
+        // special ligature — its length puts it first after sort
+        yield return ("ஸ்ரீ", "šrī");
+        yield return ("ஃ",    "ḵ"  );
 
-        //12 au(ஔ) Series
-        srcTxt = srcTxt.Replace("kau", "கௌ");
-        srcTxt = srcTxt.Replace("ṅau", "ஙௌ");
-        srcTxt = srcTxt.Replace("cau", "சௌ");
-        srcTxt = srcTxt.Replace("ñau", "ஞௌ");
-        srcTxt = srcTxt.Replace("ṭau", "டௌ");
-        srcTxt = srcTxt.Replace("ṇau", "ணௌ");
-        srcTxt = srcTxt.Replace("tau", "தௌ");
-        srcTxt = srcTxt.Replace("nau", "நௌ");
-        srcTxt = srcTxt.Replace("pau", "பௌ");
-        srcTxt = srcTxt.Replace("mau", "மௌ");
-        srcTxt = srcTxt.Replace("yau", "யௌ");
-        srcTxt = srcTxt.Replace("rau", "ரௌ");
-        srcTxt = srcTxt.Replace("lau", "லௌ");
-        srcTxt = srcTxt.Replace("vau", "வௌ");
-        srcTxt = srcTxt.Replace("ḻau", "ழௌ");
-        srcTxt = srcTxt.Replace("ḷau", "ளௌ");
-        srcTxt = srcTxt.Replace("ṟau", "றௌ");
-        srcTxt = srcTxt.Replace("ṉau", "னௌ");
-        srcTxt = srcTxt.Replace("jau", "ஜௌ");
-        srcTxt = srcTxt.Replace("ṣau", "ஷௌ");
-        srcTxt = srcTxt.Replace("sau", "ஸௌ");
-        srcTxt = srcTxt.Replace("hau", "ஹௌ");
+        // soul series (standalone vowels)
+        yield return ("அ", "a" ); yield return ("ஆ", "ā" );
+        yield return ("இ", "i" ); yield return ("ஈ", "ī" );
+        yield return ("உ", "u" ); yield return ("ஊ", "ū" );
+        yield return ("எ", "e" ); yield return ("ஏ", "ē" );
+        yield return ("ஐ", "ai"); yield return ("ஒ", "o" );
+        yield return ("ஓ", "ō" ); yield return ("ஔ", "au");
 
-        //2 ā(ஆ) Series
-        srcTxt = srcTxt.Replace("kā", "கா");
-        srcTxt = srcTxt.Replace("ṅā", "ஙா");
-        srcTxt = srcTxt.Replace("cā", "சா");
-        srcTxt = srcTxt.Replace("ñā", "ஞா");
-        srcTxt = srcTxt.Replace("ṭā", "டா");
-        srcTxt = srcTxt.Replace("ṇā", "ணா");
-        srcTxt = srcTxt.Replace("tā", "தா");
-        srcTxt = srcTxt.Replace("nā", "நா");
-        srcTxt = srcTxt.Replace("pā", "பா");
-        srcTxt = srcTxt.Replace("mā", "மா");
-        srcTxt = srcTxt.Replace("yā", "யா");
-        srcTxt = srcTxt.Replace("rā", "ரா");
-        srcTxt = srcTxt.Replace("lā", "லா");
-        srcTxt = srcTxt.Replace("vā", "வா");
-        srcTxt = srcTxt.Replace("ḻā", "ழா");
-        srcTxt = srcTxt.Replace("ḷā", "ளா");
-        srcTxt = srcTxt.Replace("ṟā", "றா");
-        srcTxt = srcTxt.Replace("ṉā", "னா");
-        srcTxt = srcTxt.Replace("jā", "ஜா");
-        srcTxt = srcTxt.Replace("ṣā", "ஷா");
-        srcTxt = srcTxt.Replace("sā", "ஸா");
-        srcTxt = srcTxt.Replace("hā", "ஹா");
+        // consonant + virama (mei / final-consonant forms)
+        foreach (var (t, l) in Consonants)
+            yield return (t + "்", l);
 
-        //3 i(இ) Series
-        srcTxt = srcTxt.Replace("ki", "கி");
-        srcTxt = srcTxt.Replace("ṅi", "ஙி");
-        srcTxt = srcTxt.Replace("ci", "சி");
-        srcTxt = srcTxt.Replace("ñi", "ஞி");
-        srcTxt = srcTxt.Replace("ṭi", "டி");
-        srcTxt = srcTxt.Replace("ṇi", "ணி");
-        srcTxt = srcTxt.Replace("ti", "தி");
-        srcTxt = srcTxt.Replace("ni", "நி");
-        srcTxt = srcTxt.Replace("pi", "பி");
-        srcTxt = srcTxt.Replace("mi", "மி");
-        srcTxt = srcTxt.Replace("yi", "யி");
-        srcTxt = srcTxt.Replace("ri", "ரி");
-        srcTxt = srcTxt.Replace("li", "லி");
-        srcTxt = srcTxt.Replace("vi", "வி");
-        srcTxt = srcTxt.Replace("ḻi", "ழி");
-        srcTxt = srcTxt.Replace("ḷi", "ளி");
-        srcTxt = srcTxt.Replace("ṟi", "றி");
-        srcTxt = srcTxt.Replace("ṉi", "னி");
-        srcTxt = srcTxt.Replace("ji", "ஜி");
-        srcTxt = srcTxt.Replace("ṣi", "ஷி");
-        srcTxt = srcTxt.Replace("si", "ஸி");
-        srcTxt = srcTxt.Replace("hi", "ஹி");
-
-        //4  ī(ஈ)	 Series 3:42pm
-        srcTxt = srcTxt.Replace("kī", "கீ");
-        srcTxt = srcTxt.Replace("ṅī", "ஙீ");
-        srcTxt = srcTxt.Replace("cī", "சீ");
-        srcTxt = srcTxt.Replace("ñī", "ஞீ");
-        srcTxt = srcTxt.Replace("ṭī", "டீ");
-        srcTxt = srcTxt.Replace("ṇī", "ணீ");
-        srcTxt = srcTxt.Replace("tī", "தீ");
-        srcTxt = srcTxt.Replace("nī", "நீ");
-        srcTxt = srcTxt.Replace("pī", "பீ");
-        srcTxt = srcTxt.Replace("mī", "மீ");
-        srcTxt = srcTxt.Replace("yī", "யீ");
-        srcTxt = srcTxt.Replace("rī", "ரீ");
-        srcTxt = srcTxt.Replace("lī", "லீ");
-        srcTxt = srcTxt.Replace("vī", "வீ");
-        srcTxt = srcTxt.Replace("ḻī", "ழீ");
-        srcTxt = srcTxt.Replace("ḷī", "ளீ");
-        srcTxt = srcTxt.Replace("ṟī", "றீ");
-        srcTxt = srcTxt.Replace("ṉī", "னீ");
-        srcTxt = srcTxt.Replace("jī", "ஜீ");
-        srcTxt = srcTxt.Replace("ṣī", "ஷீ");
-        srcTxt = srcTxt.Replace("sī", "ஸீ");
-        srcTxt = srcTxt.Replace("hī", "ஹீ");
-
-        //5 u(உ) Series
-        srcTxt = srcTxt.Replace("ku", "கு");
-        srcTxt = srcTxt.Replace("ṅu", "ஙு");
-        srcTxt = srcTxt.Replace("cu", "சு");
-        srcTxt = srcTxt.Replace("ñu", "ஞு");
-        srcTxt = srcTxt.Replace("ṭu", "டு");
-        srcTxt = srcTxt.Replace("ṇu", "ணு");
-        srcTxt = srcTxt.Replace("tu", "து");
-        srcTxt = srcTxt.Replace("nu", "நு");
-        srcTxt = srcTxt.Replace("pu", "பு");
-        srcTxt = srcTxt.Replace("mu", "மு");
-        srcTxt = srcTxt.Replace("yu", "யு");
-        srcTxt = srcTxt.Replace("ru", "ரு");
-        srcTxt = srcTxt.Replace("lu", "லு");
-        srcTxt = srcTxt.Replace("vu", "வு");
-        srcTxt = srcTxt.Replace("ḻu", "ழு");
-        srcTxt = srcTxt.Replace("ḷu", "ளு");
-        srcTxt = srcTxt.Replace("ṟu", "று");
-        srcTxt = srcTxt.Replace("ṉu", "னு");
-        srcTxt = srcTxt.Replace("ju", "ஜு");
-        srcTxt = srcTxt.Replace("ṣu", "ஷு");
-        srcTxt = srcTxt.Replace("su", "ஸு");
-        srcTxt = srcTxt.Replace("hu", "ஹு");
-
-        //6 ū (ஊ) Series
-        srcTxt = srcTxt.Replace("kū", "கூ");
-        srcTxt = srcTxt.Replace("ṅū", "ஙூ");
-        srcTxt = srcTxt.Replace("cū", "சூ");
-        srcTxt = srcTxt.Replace("ñū", "ஞூ");
-        srcTxt = srcTxt.Replace("ṭū", "டூ");
-        srcTxt = srcTxt.Replace("ṇū", "ணூ");
-        srcTxt = srcTxt.Replace("tū", "தூ");
-        srcTxt = srcTxt.Replace("nū", "நூ");
-        srcTxt = srcTxt.Replace("pū", "பூ");
-        srcTxt = srcTxt.Replace("mū", "மூ");
-        srcTxt = srcTxt.Replace("yū", "யூ");
-        srcTxt = srcTxt.Replace("rū", "ரூ");
-        srcTxt = srcTxt.Replace("lū", "லூ");
-        srcTxt = srcTxt.Replace("vū", "வூ");
-        srcTxt = srcTxt.Replace("ḻū", "ழூ");
-        srcTxt = srcTxt.Replace("ḷū", "ளூ");
-        srcTxt = srcTxt.Replace("ṟū", "றூ");
-        srcTxt = srcTxt.Replace("ṉū", "னூ");
-        srcTxt = srcTxt.Replace("jū", "ஜூ");
-        srcTxt = srcTxt.Replace("ṣū", "ஷூ");
-        srcTxt = srcTxt.Replace("sū", "ஸூ");
-        srcTxt = srcTxt.Replace("hū", "ஹூ");
-
-        //7 e(எ) Series
-        srcTxt = srcTxt.Replace("ke", "கெ");
-        srcTxt = srcTxt.Replace("ṅe", "ஙெ");
-        srcTxt = srcTxt.Replace("ce", "செ");
-        srcTxt = srcTxt.Replace("ñe", "ஞெ");
-        srcTxt = srcTxt.Replace("ṭe", "டெ");
-        srcTxt = srcTxt.Replace("ṇe", "ணெ");
-        srcTxt = srcTxt.Replace("te", "தெ");
-        srcTxt = srcTxt.Replace("ne", "நெ");
-        srcTxt = srcTxt.Replace("pe", "பெ");
-        srcTxt = srcTxt.Replace("me", "மெ");
-        srcTxt = srcTxt.Replace("ye", "யெ");
-        srcTxt = srcTxt.Replace("re", "ரெ");
-        srcTxt = srcTxt.Replace("le", "லெ");
-        srcTxt = srcTxt.Replace("ve", "வெ");
-        srcTxt = srcTxt.Replace("ḻe", "ழெ");
-        srcTxt = srcTxt.Replace("ḷe", "ளெ");
-        srcTxt = srcTxt.Replace("ṟe", "றெ");
-        srcTxt = srcTxt.Replace("ṉe", "னெ");
-        srcTxt = srcTxt.Replace("je", "ஜெ");
-        srcTxt = srcTxt.Replace("ṣe", "ஷெ");
-        srcTxt = srcTxt.Replace("se", "ஸெ");
-        srcTxt = srcTxt.Replace("he", "ஹெ");
-
-        //8 ē(ஏ) Series
-        srcTxt = srcTxt.Replace("kē", "கே");
-        srcTxt = srcTxt.Replace("ṅē", "ஙே");
-        srcTxt = srcTxt.Replace("cē", "சே");
-        srcTxt = srcTxt.Replace("ñē", "ஞே");
-        srcTxt = srcTxt.Replace("ṭē", "டே");
-        srcTxt = srcTxt.Replace("ṇē", "ணே");
-        srcTxt = srcTxt.Replace("tē", "தே");
-        srcTxt = srcTxt.Replace("nē", "நே");
-        srcTxt = srcTxt.Replace("pē", "பே");
-        srcTxt = srcTxt.Replace("mē", "மே");
-        srcTxt = srcTxt.Replace("yē", "யே");
-        srcTxt = srcTxt.Replace("rē", "ரே");
-        srcTxt = srcTxt.Replace("lē", "லே");
-        srcTxt = srcTxt.Replace("vē", "வே");
-        srcTxt = srcTxt.Replace("ḻē", "ழே");
-        srcTxt = srcTxt.Replace("ḷē", "ளே");
-        srcTxt = srcTxt.Replace("ṟē", "றே");
-        srcTxt = srcTxt.Replace("ṉē", "னே");
-        srcTxt = srcTxt.Replace("jē", "ஜே");
-        srcTxt = srcTxt.Replace("ṣē", "ஷே");
-        srcTxt = srcTxt.Replace("sē", "ஸே");
-        srcTxt = srcTxt.Replace("hē", "ஹே");
-
-        //9 ai(ஐ) Series
-        srcTxt = srcTxt.Replace("kai", "கை");
-        srcTxt = srcTxt.Replace("ṅai", "ஙை");
-        srcTxt = srcTxt.Replace("cai", "சை");
-        srcTxt = srcTxt.Replace("ñai", "ஞை");
-        srcTxt = srcTxt.Replace("ṭai", "டை");
-        srcTxt = srcTxt.Replace("ṇai", "ணை");
-        srcTxt = srcTxt.Replace("tai", "தை");
-        srcTxt = srcTxt.Replace("nai", "நை");
-        srcTxt = srcTxt.Replace("pai", "பை");
-        srcTxt = srcTxt.Replace("mai", "மை");
-        srcTxt = srcTxt.Replace("yai", "யை");
-        srcTxt = srcTxt.Replace("rai", "ரை");
-        srcTxt = srcTxt.Replace("lai", "லை");
-        srcTxt = srcTxt.Replace("vai", "வை");
-        srcTxt = srcTxt.Replace("ḻai", "ழை");
-        srcTxt = srcTxt.Replace("ḷai", "ளை");
-        srcTxt = srcTxt.Replace("ṟai", "றை");
-        srcTxt = srcTxt.Replace("ṉai", "னை");
-        srcTxt = srcTxt.Replace("jai", "ஜை");
-        srcTxt = srcTxt.Replace("ṣai", "ஷை");
-        srcTxt = srcTxt.Replace("sai", "ஸை");
-        srcTxt = srcTxt.Replace("hai", "ஹை");
-
-        //10 o(ஒ) Series
-        srcTxt = srcTxt.Replace("ko", "கொ");
-        srcTxt = srcTxt.Replace("ṅo", "ஙொ");
-        srcTxt = srcTxt.Replace("co", "சொ");
-        srcTxt = srcTxt.Replace("ño", "ஞொ");
-        srcTxt = srcTxt.Replace("ṭo", "டொ");
-        srcTxt = srcTxt.Replace("ṇo", "ணொ");
-        srcTxt = srcTxt.Replace("to", "தொ");
-        srcTxt = srcTxt.Replace("no", "நொ");
-        srcTxt = srcTxt.Replace("po", "பொ");
-        srcTxt = srcTxt.Replace("mo", "மொ");
-        srcTxt = srcTxt.Replace("yo", "யொ");
-        srcTxt = srcTxt.Replace("ro", "ரொ");
-        srcTxt = srcTxt.Replace("lo", "லொ");
-        srcTxt = srcTxt.Replace("vo", "வொ");
-        srcTxt = srcTxt.Replace("ḻo", "ழொ");
-        srcTxt = srcTxt.Replace("ḷo", "ளொ");
-        srcTxt = srcTxt.Replace("ṟo", "றொ");
-        srcTxt = srcTxt.Replace("ṉo", "னொ");
-        srcTxt = srcTxt.Replace("jo", "ஜொ");
-        srcTxt = srcTxt.Replace("ṣo", "ஷொ");
-        srcTxt = srcTxt.Replace("so", "ஸொ");
-        srcTxt = srcTxt.Replace("ho", "ஹொ");
-
-        //11 ō(ஓ) Series
-        srcTxt = srcTxt.Replace("kō", "கோ");
-        srcTxt = srcTxt.Replace("ṅō", "ஙோ");
-        srcTxt = srcTxt.Replace("cō", "சோ");
-        srcTxt = srcTxt.Replace("ñō", "ஞோ");
-        srcTxt = srcTxt.Replace("ṭō", "டோ");
-        srcTxt = srcTxt.Replace("ṇō", "ணோ");
-        srcTxt = srcTxt.Replace("tō", "தோ");
-        srcTxt = srcTxt.Replace("nō", "நோ");
-        srcTxt = srcTxt.Replace("pō", "போ");
-        srcTxt = srcTxt.Replace("mō", "மோ");
-        srcTxt = srcTxt.Replace("yō", "யோ");
-        srcTxt = srcTxt.Replace("rō", "ரோ");
-        srcTxt = srcTxt.Replace("lō", "லோ");
-        srcTxt = srcTxt.Replace("vō", "வோ");
-        srcTxt = srcTxt.Replace("ḻō", "ழோ");
-        srcTxt = srcTxt.Replace("ḷō", "ளோ");
-        srcTxt = srcTxt.Replace("ṟō", "றோ");
-        srcTxt = srcTxt.Replace("ṉō", "னோ");
-        srcTxt = srcTxt.Replace("jō", "ஜோ");
-        srcTxt = srcTxt.Replace("ṣō", "ஷோ");
-        srcTxt = srcTxt.Replace("sō", "ஸோ");
-        srcTxt = srcTxt.Replace("hō", "ஹோ");
-
-        //13 a Series
-        srcTxt = srcTxt.Replace("ka", "க");
-        srcTxt = srcTxt.Replace("ṅa", "ங");
-        srcTxt = srcTxt.Replace("ca", "ச");
-        srcTxt = srcTxt.Replace("ña", "ஞ");
-        srcTxt = srcTxt.Replace("ṭa", "ட");
-        srcTxt = srcTxt.Replace("ṇa", "ண");
-        srcTxt = srcTxt.Replace("ta", "த");
-        srcTxt = srcTxt.Replace("na", "ந");
-        srcTxt = srcTxt.Replace("pa", "ப");
-        srcTxt = srcTxt.Replace("ma", "ம");
-        srcTxt = srcTxt.Replace("ya", "ய");
-        srcTxt = srcTxt.Replace("ra", "ர");
-        srcTxt = srcTxt.Replace("la", "ல");
-        srcTxt = srcTxt.Replace("va", "வ");
-        srcTxt = srcTxt.Replace("ḻa", "ழ");
-        srcTxt = srcTxt.Replace("ḷa", "ள");
-        srcTxt = srcTxt.Replace("ṟa", "ற");
-        srcTxt = srcTxt.Replace("ṣa", "ஷ");
-        srcTxt = srcTxt.Replace("ja", "ஜ");
-        srcTxt = srcTxt.Replace("ṉa", "ன");
-        srcTxt = srcTxt.Replace("sa", "ஸ");
-        srcTxt = srcTxt.Replace("ha", "ஹ");
-
-        //1 k mei Series
-        srcTxt = srcTxt.Replace("k", "க்");
-        srcTxt = srcTxt.Replace("ṅ", "ங்");
-        srcTxt = srcTxt.Replace("c", "ச்");
-        srcTxt = srcTxt.Replace("ñ", "ஞ்");
-        srcTxt = srcTxt.Replace("ṭ", "ட்");
-        srcTxt = srcTxt.Replace("ṇ", "ண்");
-        srcTxt = srcTxt.Replace("t", "த்");
-        srcTxt = srcTxt.Replace("n", "ந்");
-        srcTxt = srcTxt.Replace("p", "ப்");
-        srcTxt = srcTxt.Replace("m", "ம்");
-        srcTxt = srcTxt.Replace("y", "ய்");
-        srcTxt = srcTxt.Replace("r", "ர்");
-        srcTxt = srcTxt.Replace("l", "ல்");
-        srcTxt = srcTxt.Replace("v", "வ்");
-        srcTxt = srcTxt.Replace("ḻ", "ழ்");
-        srcTxt = srcTxt.Replace("ḷ", "ள்");
-        srcTxt = srcTxt.Replace("ṟ", "ற்");
-        srcTxt = srcTxt.Replace("ṉ", "ன்");
-        srcTxt = srcTxt.Replace("j", "ஜ்");
-        srcTxt = srcTxt.Replace("ṣ", "ஷ்");
-        srcTxt = srcTxt.Replace("s", "ஸ்");
-        srcTxt = srcTxt.Replace("h", "ஹ்");
-
-        //0 soul Series
-        srcTxt = srcTxt.Replace("au", "ஔ");
-        srcTxt = srcTxt.Replace("ai", "ஐ");
-        srcTxt = srcTxt.Replace("a", "அ");
-        srcTxt = srcTxt.Replace("ā", "ஆ");
-        srcTxt = srcTxt.Replace("i", "இ");
-        srcTxt = srcTxt.Replace("ī", "ஈ");
-        srcTxt = srcTxt.Replace("u", "உ");
-        srcTxt = srcTxt.Replace("ū", "ஊ");
-        srcTxt = srcTxt.Replace("e", "எ");
-        srcTxt = srcTxt.Replace("ē", "ஏ");
-        srcTxt = srcTxt.Replace("o", "ஒ");
-        srcTxt = srcTxt.Replace("ō", "ஓ");
-        srcTxt = srcTxt.Replace("ḵ", "ஃ");
-
-        return srcTxt;
+        // consonant + vowel diacritic (12 vowel series, bare /a/ included)
+        foreach (var (t, l) in Consonants)
+            foreach (var (d, v) in Vowels)
+                yield return (t + d, l + v);
     }
+
+    private static IEnumerable<(string Key, string Value)> UniEntries()
+    {
+        yield return ("šrī", "ஸ்ரீ");
+        yield return ("ḵ",   "ஃ"  );
+
+        // consonant + vowel (12 vowel series, bare /a/ included)
+        foreach (var (t, l) in Consonants)
+            foreach (var (d, v) in Vowels)
+                yield return (l + v, t + d);
+
+        // standalone consonants → mei forms (virama)
+        foreach (var (t, l) in Consonants)
+            yield return (l, t + "்");
+
+        // soul series — regex sort by length handles au/ai before a/i automatically
+        yield return ("au", "ஔ"); yield return ("ai", "ஐ");
+        yield return ("ā",  "ஆ"); yield return ("ī",  "ஈ");
+        yield return ("ū",  "ஊ"); yield return ("ē",  "ஏ");
+        yield return ("ō",  "ஓ"); yield return ("a",  "அ");
+        yield return ("i",  "இ"); yield return ("u",  "உ");
+        yield return ("e",  "எ"); yield return ("o",  "ஒ");
+    }
+
+    private static (Dictionary<string, string> Map, Regex Regex) BuildTable(
+        IEnumerable<(string Key, string Value)> entries)
+    {
+        var map = entries.ToDictionary(e => e.Key, e => e.Value);
+        var pattern = string.Join("|",
+            map.Keys
+               .OrderByDescending(k => k.Length)
+               .Select(Regex.Escape));
+        return (map, new Regex(pattern, RegexOptions.Compiled | RegexOptions.CultureInvariant));
+    }
+
+    public static string Transtyle(string srcTxt) =>
+        StyleRegex.Replace(srcTxt, m => StyleMap[m.Value]);
+
+    public static string Trans2Uni(string srcTxt) =>
+        UniRegex.Replace(srcTxt, m => UniMap[m.Value]);
 }
